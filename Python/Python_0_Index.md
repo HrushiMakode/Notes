@@ -56,12 +56,12 @@ flowchart TD
 
 | # | Phase | File | Modules | Status |
 |---|-------|------|---------|--------|
-| 1 | **The Foundation** | [Python_Foundation.md](Python_Foundation.md) | M1–M5: Object Model, Variables, Data Structures, Strings, Functions | `[x]` ✅ Done |
-| 2 | **The Mechanics** | [Python_Mechanics.md](Python_Mechanics.md) | M6–M10: Iterators, Decorators, OOP, Errors, Comprehensions | `[x]` ✅ Done |
-| 3 | **CPython Internals** | [Python_Internals.md](Python_Internals.md) | M11–M13: Bytecode, Memory Management, GIL | `[x]` ✅ Done |
-| 4 | **Concurrency & Parallelism** | [Python_Concurrency.md](Python_Concurrency.md) | M14–M16: Threading, Multiprocessing, Asyncio | `[x]` ✅ Done |
-| 5 | **Production Python** | [Python_Production.md](Python_Production.md) | M17–M20: Imports, Type Hints, Testing, Profiling | `[x]` ✅ Done |
-| 6 | **Design & Architecture** | [Python_Design.md](Python_Design.md) | M21–M22: Design Patterns, System Design | `[x]` ✅ Done |
+| 1 | **The Foundation** | [Python_1_Foundation.md](Python_1_Foundation.md) | M1–M5: Object Model, Variables, Data Structures, Strings, Functions | `[x]` ✅ Done |
+| 2 | **The Mechanics** | [Python_2_Mechanics.md](Python_2_Mechanics.md) | M6–M10: Iterators, Decorators, OOP, Errors, Comprehensions | `[x]` ✅ Done |
+| 3 | **CPython Internals** | [Python_3_Internals.md](Python_3_Internals.md) | M11–M13: Bytecode, Memory Management, GIL | `[x]` ✅ Done |
+| 4 | **Concurrency & Parallelism** | [Python_4_Concurrency.md](Python_4_Concurrency.md) | M14–M16: Threading, Multiprocessing, Asyncio | `[x]` ✅ Done |
+| 5 | **Production Python** | [Python_5_Production.md](Python_5_Production.md) | M17–M20: Imports, Type Hints, Testing, Profiling | `[x]` ✅ Done |
+| 6 | **Design & Architecture** | [Python_6_Design.md](Python_6_Design.md) | M21–M22: Design Patterns, System Design | `[x]` ✅ Done |
 
 ---
 
@@ -69,9 +69,9 @@ flowchart TD
 
 | File | Phase | Contents |
 |------|-------|----------|
-| 📂 [Python_Foundation.md](Python_Foundation.md) | Phase 1 | Object Model → Variables & Memory → Data Structures → Strings → Functions |
-| 📂 [Python_Mechanics.md](Python_Mechanics.md) | Phase 2 | Iterators & Generators → Decorators → OOP → Error Handling → Comprehensions |
-| 📂 [Python_Internals.md](Python_Internals.md) | Phase 3 | Compilation & Bytecode → Memory Management → The GIL |
-| 📂 [Python_Concurrency.md](Python_Concurrency.md) | Phase 4 | Threading → Multiprocessing → Asyncio |
-| 📂 [Python_Production.md](Python_Production.md) | Phase 5 | Modules & Imports → Type Hints → Testing → Performance |
-| 📂 [Python_Design.md](Python_Design.md) | Phase 6 | Design Patterns → System Design → **Master Tables & Final Gotchas** |
+| 📂 [Python_1_Foundation.md](Python_1_Foundation.md) | Phase 1 | Object Model → Variables & Memory → Data Structures → Strings → Functions |
+| 📂 [Python_2_Mechanics.md](Python_2_Mechanics.md) | Phase 2 | Iterators & Generators → Decorators → OOP → Error Handling → Comprehensions |
+| 📂 [Python_3_Internals.md](Python_3_Internals.md) | Phase 3 | Compilation & Bytecode → Memory Management → The GIL |
+| 📂 [Python_4_Concurrency.md](Python_4_Concurrency.md) | Phase 4 | Threading → Multiprocessing → Asyncio |
+| 📂 [Python_5_Production.md](Python_5_Production.md) | Phase 5 | Modules & Imports → Type Hints → Testing → Performance |
+| 📂 [Python_6_Design.md](Python_6_Design.md) | Phase 6 | Design Patterns → System Design → **Master Tables & Final Gotchas** |
