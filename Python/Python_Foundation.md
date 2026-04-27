@@ -476,3 +476,4 @@ connect("db", 5432, 10)            # ❌ TypeError
 13. Late binding closures → `lambda i=i: i` fix
 14. String `+=` in loop → O(n²), use `join()`
 15. `len(str)` = characters, `len(bytes)` = bytes — different for non-ASCII
+16. **Tuple `+=` puzzle:** `t = ([1,2],); t[0] += [3,4]` → raises `TypeError` BUT the list IS mutated! Step 1: `t[0].__iadd__([3,4])` succeeds (mutates list). Step 2: `t[0] = temp` fails (tuple assignment). Both a side effect AND an exception.

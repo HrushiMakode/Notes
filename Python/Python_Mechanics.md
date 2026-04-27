@@ -200,7 +200,7 @@ Database() is Database()    # True
 
 ### 🔑 Core Idea
 
-Python OOP has unique features: C3 linearization for MRO, `super()` follows MRO not parent, descriptors power `@property`, and `__slots__` optimizes memory.
+Python OOP has unique features: C3 linearization for MRO, `super()` follows MRO not parent, descriptors power `@property`, `__slots__` optimizes memory, and the **dunder method system** (Python Data Model) is how objects integrate with built-in syntax.
 
 ### 💡 Key Concepts
 
@@ -241,6 +241,139 @@ flowchart TD
 3. Non-data descriptor (class) → has `__get__` only
 4. `__getattr__()` fallback
 
+---
+
+### 🔑 Dunder Methods Deep Dive (Python Data Model)
+
+**`__repr__` vs `__str__`:**
+
+| Aspect | `__repr__` | `__str__` |
+|--------|-----------|-----------|
+| Purpose | Developer / debugging | End user / display |
+| Goal | Unambiguous, ideally `eval()`-able | Pretty, readable |
+| Fallback | Is the fallback for `__str__` | Does NOT fall back |
+
+```python
+class Money:
+    def __init__(self, amount, currency="USD"):
+        self.amount = amount
+        self.currency = currency
+
+    def __repr__(self):
+        return f"Money({self.amount!r}, {self.currency!r})"    # dev view
+
+    def __str__(self):
+        return f"${self.amount:.2f} {self.currency}"            # user view
+```
+
+| Context | Calls |
+|---------|-------|
+| `repr(obj)`, REPL display | `__repr__` |
+| `print(obj)`, `f"{obj}"` | `__str__` → falls back to `__repr__` |
+| Inside a container: `print([obj])` | `__repr__` on each element ⚠️ |
+
+> **Rule:** Always implement `__repr__`. Only add `__str__` if you need a different user-facing representation.
+
+**`__eq__` / `__hash__` Contract (memorize this):**
+
+> **If `a == b` is `True`, then `hash(a) == hash(b)` MUST be `True`.**
+> (The reverse is NOT required — hash collisions are fine.)
+
+```python
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __eq__(self, other):
+        if not isinstance(other, Point):
+            return NotImplemented       # ← NOT False!
+        return self.x == other.x and self.y == other.y
+
+    def __hash__(self):
+        return hash((self.x, self.y))   # same fields as __eq__
+```
+
+**Why `NotImplemented` instead of `False`?**
+
+`NotImplemented` tells Python: *"I don't know how to compare with this type — try asking the other object."* Python then tries `other.__eq__(self)` (the reflected operation). Returning `False` would incorrectly say "we are definitely not equal."
+
+**Reflection mechanism for `a == b`:**
+1. Call `a.__eq__(b)`
+2. If `NotImplemented` → call `b.__eq__(a)`
+3. If still `NotImplemented` → fall back to identity (`is`)
+4. **Special:** If `type(b)` is a subclass of `type(a)`, Python tries `b.__eq__(a)` **first**
+
+**What Python does automatically:**
+
+| You define | Python does |
+|-----------|------------|
+| Nothing | `__eq__` uses `is`, `__hash__` uses `id()` |
+| `__eq__` only | **Sets `__hash__ = None`** → unhashable ⚠️ |
+| `__eq__` + `__hash__` | Uses your implementations |
+
+**Truthiness Fallback Chain:**
+
+```
+if obj:  →  __bool__()
+                ↓ (not defined)
+         →  __len__()  →  truthy if != 0
+                ↓ (not defined)
+         →  always truthy
+```
+
+```python
+>>> bool([])         # False — __len__ returns 0
+>>> bool([1, 2])     # True — __len__ returns 2
+>>> bool(0)          # False — int.__bool__ returns False
+>>> bool(None)       # False — NoneType.__bool__ returns False
+```
+
+**Mutable Fields + Hash = Silent Corruption:**
+
+```python
+user = User("Alice", "alice@x.com")
+users = {user}                    # hashed by email
+user.email = "new@x.com"         # MUTATION after insertion
+user in users                     # False! Hash points to wrong bucket
+# She's a GHOST ENTRY — unreachable, undeletable, no warning
+```
+
+> 💀 Fix: Make hashed fields immutable via `@dataclass(frozen=True)`.
+
+**`dataclasses` — Auto-Generated Dunders:**
+
+| `@dataclass` option | `__eq__` | `__hash__` | Mutable? |
+|---------------------|----------|------------|----------|
+| Default | ✅ | ❌ (`None`) | ✅ |
+| `frozen=True` | ✅ | ✅ | ❌ |
+| `unsafe_hash=True` | ✅ | ✅ | ✅ ⚠️ |
+
+**Inheritance Hash Trap:**
+
+```python
+class Animal:
+    def __eq__(self, other):
+        if not isinstance(other, Animal): return NotImplemented
+        return self.name == other.name
+    def __hash__(self): return hash(self.name)
+
+class Dog(Animal):
+    def __eq__(self, other):
+        if not isinstance(other, Dog): return NotImplemented
+        return self.name == other.name and self.breed == other.breed
+    def __hash__(self): return hash((self.name, self.breed))
+
+a = Animal("Rex")
+d = Dog("Rex", "Labrador")
+a == d    # True (Animal.__eq__ sees Dog as isinstance(Animal))
+hash(a) == hash(d)   # False! CONTRACT VIOLATED — silent corruption
+```
+
+Fix: Use `type(other) is Animal` (strict) instead of `isinstance`.
+
+---
+
 ### 🧠 Mental Model
 
 `super()` ≠ "call parent." `super()` = "call next in MRO." In diamond inheritance, B's `super()` can call C (sibling), not A (parent).
@@ -249,8 +382,11 @@ flowchart TD
 
 - `super()` follows MRO, not class hierarchy — critical in diamond inheritance
 - `__slots__` blocks `__dict__` — no dynamic attributes
-- Defining `__eq__` without `__hash__` → unhashable (from Module 3)
+- Defining `__eq__` without `__hash__` → Python sets `__hash__ = None` → unhashable
 - `@property` is just a data descriptor under the hood
+- Always return `NotImplemented` from `__eq__`, never `False`, for unknown types
+- `print([obj])` calls `__repr__` on elements, not `__str__`
+- Mutating hashed fields after set/dict insertion = silent ghost entries
 
 ### 🎯 Must-Know for Interview
 
@@ -258,6 +394,10 @@ flowchart TD
 - `super()` follows MRO — explain with diamond example
 - `__slots__` for memory optimization of millions of instances
 - Descriptor protocol powers `@property`, `@classmethod`, `@staticmethod`
+- `__eq__`/`__hash__` contract — violations silently corrupt sets/dicts
+- `NotImplemented` signal vs returning `False`
+- Truthiness chain: `__bool__` → `__len__` → `True`
+- `dataclass(frozen=True)` for correct hashable value objects
 
 ### 📎 Quick Code Snippet
 
@@ -279,6 +419,16 @@ class D(B, C):
         super().method()
 
 D().method()    # D → B → C → A (follows MRO)
+
+# Value object done right
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Coordinate:
+    lat: float
+    lon: float
+    # Auto: __init__, __repr__, __eq__, __hash__ (frozen!)
+    # Immutable — safe as dict key / set member
 ```
 
 ---
