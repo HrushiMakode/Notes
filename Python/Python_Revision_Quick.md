@@ -5,214 +5,464 @@
 
 ---
 
+## 🗺️ Full Curriculum Map
+
+```mermaid
+flowchart LR
+    subgraph P1["🔴 Phase 1: Foundation"]
+        M1["M1: Object Model"]
+        M2["M2: Variables"]
+        M3["M3: Data Structures"]
+        M4["M4: Strings"]
+        M5["M5: Functions"]
+    end
+    subgraph P2["🟠 Phase 2: Mechanics"]
+        M6["M6: Iterators"]
+        M7["M7: Decorators"]
+        M8["M8: OOP"]
+        M9["M9: Errors"]
+        M10["M10: Comprehensions"]
+    end
+    subgraph P3["🔵 Phase 3: Internals"]
+        M11["M11: Bytecode"]
+        M12["M12: Memory"]
+        M13["M13: GIL"]
+    end
+    subgraph P4["🟢 Phase 4: Concurrency"]
+        M14["M14: Threading"]
+        M15["M15: Multiprocessing"]
+        M16["M16: Asyncio"]
+    end
+    subgraph P5["🟣 Phase 5: Production"]
+        M17["M17: Imports"]
+        M18["M18: Types"]
+        M19["M19: Testing"]
+        M20["M20: Profiling"]
+    end
+    subgraph P6["🔷 Phase 6: Design"]
+        M21["M21: Patterns"]
+        M22["M22: System Design"]
+    end
+
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6
+
+    style P1 fill:#d00000,color:#fff
+    style P2 fill:#e76f51,color:#fff
+    style P3 fill:#264653,color:#fff
+    style P4 fill:#2a9d8f,color:#fff
+    style P5 fill:#6a0572,color:#fff
+    style P6 fill:#1a535c,color:#fff
+```
+
+---
+
 ## Phase 1 — Foundation (M1–M5)
 
-### Object Model
-- Everything is an object — `id()` (identity), `type()` (type), value
-- `is` = identity (same object) | `==` = equality (same value via `__eq__`)
-- **Only use `is` for:** `None`, `True`, `False`
+### 🖼️ Object Model — Everything Is an Object
+
+```mermaid
+flowchart TD
+    OBJ["Every Python Object"] --> ID["🆔 Identity\nid() — never changes"]
+    OBJ --> TYPE["📦 Type\ntype() — never changes"]
+    OBJ --> VAL["💎 Value\nmay or may not change"]
+
+    VAL --> MUT["🔓 Mutable\nlist, dict, set"]
+    VAL --> IMMUT["🔒 Immutable\nint, str, tuple, frozenset"]
+
+    MUT -->|"❌ unhashable"| NOKEY["Can't be dict key\nCan't be in set"]
+    IMMUT -->|"✅ hashable"| KEY["Can be dict key\nCan be in set"]
+
+    style MUT fill:#d00000,color:#fff
+    style IMMUT fill:#2d6a4f,color:#fff
+    style NOKEY fill:#800f19,color:#fff
+    style KEY fill:#1b4332,color:#fff
+```
+
+- `is` = identity (same `id()`) | `==` = equality (`__eq__`)
+- **Only `is` for:** `None`, `True`, `False`
 - Integer cache: `[-5, 256]` — CPython-specific, never rely on it
-- Mutable: `list, dict, set` | Immutable: `int, str, tuple, frozenset, bytes`
-- Mutable → unhashable → can't be dict key / set member
-- Tuple with mutable inside = still unhashable: `{(1, [2])}` → `TypeError`
 
-### Variables & Memory
-- Variables = labels (name bindings), NOT boxes. `=` never copies.
-- **Reference counting:** refcount 0 → immediately freed (deterministic)
-- `sys.getrefcount()` returns count **+1** (temp arg reference)
-- **Shallow copy:** new container, shared inner objects
-- **Deep copy:** everything new, recursively. Handles cycles.
+### 🖼️ Variables & Memory — Labels, Not Boxes
+
+```mermaid
+flowchart LR
+    subgraph ASSIGN["a = [1,2,3]; b = a"]
+        A["a"] -->|label| OBJ["[1, 2, 3]"]
+        B["b"] -->|label| OBJ
+    end
+    subgraph REBIND["a = [4,5,6]"]
+        A2["a"] --> NEW["[4, 5, 6]"]
+        B2["b"] --> OLD["[1, 2, 3]"]
+    end
+
+    ASSIGN -->|"a = [4,5,6]\n(rebind a)"| REBIND
+
+    style OBJ fill:#2a9d8f,color:#fff
+    style NEW fill:#e76f51,color:#fff
+    style OLD fill:#2a9d8f,color:#fff
+```
+
+- `=` never copies — just moves a label
+- **Ref counting:** refcount 0 → immediately freed
 - `del` deletes the **name**, not the object
-- **Pass-by-object-reference:** mutate → caller sees it. Rebind → caller doesn't.
-- `+=` on list → in-place (`__iadd__`). `+=` on tuple → new object.
-- **Tuple `+=` puzzle:** `t=([1],); t[0]+=[2]` → `TypeError` BUT list IS mutated (step 1 succeeds, step 2 fails)
+- **Pass-by-object-reference:** mutate → visible. Rebind → invisible.
 
-### Data Structures
+### 🖼️ Copy Model
 
-| Structure | Internal | Key Operations |
-|-----------|----------|---------------|
-| `list` | Dynamic array of pointers | `append` O(1), `insert(0)` **O(n)**, `pop(0)` **O(n)** |
-| `dict` | Hash table (compact) | O(1) avg lookup, insertion-ordered since **3.7** |
-| `set` | Hash table (keys only) | O(1) membership, `\|` `&` `-` `^` operations |
-| `tuple` | Fixed-size array | 27% smaller than list, hashable if contents are |
+```mermaid
+flowchart TD
+    subgraph SHALLOW["Shallow Copy"]
+        SO["original"] --> OUTER1["{ }"]
+        SC["copy"] --> OUTER2["{ }"]
+        OUTER1 --> INNER["[shared inner]"]
+        OUTER2 --> INNER
+    end
+    subgraph DEEP["Deep Copy"]
+        DO["original"] --> DOUTER["{ }"]
+        DC["copy"] --> DCOUTER["{ }"]
+        DOUTER --> DI1["[inner A]"]
+        DCOUTER --> DI2["[inner A']"]
+    end
 
-- Need a queue? → `collections.deque` (O(1) both ends)
-- `defaultdict` inserts on read — silent side effect
-- Never mutate dict/set during iteration → `RuntimeError`
-- `__eq__` without `__hash__` → class becomes unhashable
+    style INNER fill:#d00000,color:#fff
+    style DI1 fill:#2d6a4f,color:#fff
+    style DI2 fill:#2d6a4f,color:#fff
+```
+
+| Method | Copies | Use for |
+|--------|--------|---------|
+| `=` | Nothing (new label) | Shared state |
+| `.copy()` / `copy.copy()` | Top-level only | Flat structures |
+| `copy.deepcopy()` | Everything recursively | Nested structures |
+
+### 🖼️ Data Structures — Internals at a Glance
+
+```mermaid
+flowchart TD
+    subgraph LIST["list — Dynamic Array"]
+        LP["ptr0 | ptr1 | ptr2 | ... | empty | empty"]
+    end
+    subgraph DICT["dict — Compact Hash Table"]
+        DI["indices (sparse)"] --> DE["entries (dense, insertion-order)"]
+    end
+    subgraph SET["set — Hash Table (keys only)"]
+        SK["key | key | key | ..."]
+    end
+    subgraph TUPLE["tuple — Fixed Array"]
+        TP["ptr0 | ptr1 | ptr2"]
+    end
+
+    style LIST fill:#264653,color:#fff
+    style DICT fill:#2a9d8f,color:#fff
+    style SET fill:#e76f51,color:#fff
+    style TUPLE fill:#6a0572,color:#fff
+```
+
+| Structure | `append` | `insert(0)` | `x in` | Ordered? | Mutable? |
+|-----------|----------|-------------|--------|----------|----------|
+| `list` | O(1) | **O(n)** | O(n) | ✅ | ✅ |
+| `dict` | O(1) | — | **O(1)** | ✅ 3.7+ | ✅ |
+| `set` | O(1) | — | **O(1)** | ❌ | ✅ |
+| `tuple` | — | — | O(n) | ✅ | ❌ |
 
 ### Strings & Unicode
-- `str` = Unicode code points | `bytes` = raw bytes
-- **Decode at I/O boundary, work with `str` inside, encode at boundary**
-- UTF-8: 1–4 bytes/char. ASCII=1, CJK=3, emoji=4
-- `len(str)` = characters. `len(bytes)` = bytes. Different for non-ASCII.
-- **`"".join(list)` = O(n). `+=` in loop = O(n²).** ← interview classic
+- `str` = code points | `bytes` = raw bytes
+- **`"".join(list)` = O(n). `+=` in loop = O(n²).**
+- UTF-8: ASCII=1B, CJK=3B, emoji=4B
 - One emoji → entire string upgrades to 4 bytes/char (PEP 393)
-- f-string debug: `f"{var=}"` (3.8+)
 
-### Functions & Scoping
-- Functions are **first-class objects** — assigned, passed, returned, stored
-- **LEGB:** Local → Enclosing → Global → Built-in
-- Assignment anywhere in function body → **local for entire function** → `UnboundLocalError`
-- `global` for module-level. `nonlocal` for enclosing scope.
-- **Closures capture VARIABLES, not values** → late binding trap
-- Fix: `lambda i=i: i` (default arg captures value at definition)
-- Defaults evaluated **once at definition** → `None` sentinel for mutables
-- `*` in signature → everything after is keyword-only
+### 🖼️ LEGB Scope Chain
+
+```mermaid
+flowchart TD
+    subgraph B["Built-in (len, print)"]
+        subgraph G["Global (module level)"]
+            subgraph E["Enclosing (outer function)"]
+                L["Local (current function)\n← search starts HERE"]
+            end
+        end
+    end
+
+    style L fill:#d00000,color:#fff
+    style E fill:#c44b2c,color:#fff
+    style G fill:#e76f51,color:#fff
+    style B fill:#f4a261,color:#000
+```
+
+- Assignment anywhere in body → local for **entire** function → `UnboundLocalError`
+- **Closures capture VARIABLES, not values** → fix: `lambda i=i: i`
+- Defaults evaluated **once at definition** → `None` sentinel
 
 ---
 
 ## Phase 2 — Mechanics (M6–M10)
 
-### Iterators & Generators
-- Iterable = has `__iter__()` | Iterator = has `__iter__()` + `__next__()`
-- `for` loop → `iter()` → repeated `next()` → catches `StopIteration`
-- Generator = function with `yield` — pauses and resumes
-- Generator expression `(x for x in ...)` → **O(1) memory, single-use**
-- `yield from` delegates to sub-generator (proxies send/throw/close)
-- **Generators are single-use** — second `list(gen)` = `[]`
+### 🖼️ Generator Lifecycle
 
-### Decorators
-- `@dec` = `func = dec(func)` — just a function call
-- **Always `@functools.wraps(func)`** — preserves `__name__`, `__doc__`
-- Decorator with args = **decorator factory** (3 nesting levels)
-- Stack: `@A @B @C def f` → `A(B(C(f)))`. A's wrapper executes first.
+```mermaid
+stateDiagram-v2
+    [*] --> CREATED: gen = func()
+    CREATED --> RUNNING: next(gen)
+    RUNNING --> SUSPENDED: yield value
+    SUSPENDED --> RUNNING: next(gen)
+    RUNNING --> CLOSED: StopIteration
+    SUSPENDED --> CLOSED: gen.close()
+    CLOSED --> [*]
+```
 
-### OOP
-- `__new__` creates. `__init__` initializes.
-- **MRO = C3 linearization.** `super()` follows MRO, NOT parent.
-- `D(B,C)` where both inherit `A` → MRO: `D → B → C → A → object`
-- `__slots__` → ~40% less memory, no `__dict__`, no dynamic attrs
-- **Attribute lookup:** data descriptor → instance dict → non-data descriptor → `__getattr__`
-- `__repr__` = developer/debug. `__str__` = user-facing. Always implement `__repr__`.
-- `print([obj])` calls `__repr__` on elements, NOT `__str__` ⚠️
-- **`__eq__`/`__hash__` contract:** `a == b` → `hash(a) == hash(b)` MUST hold
-- Return `NotImplemented` from `__eq__`, never `False`, for unknown types
-- **Truthiness chain:** `__bool__()` → `__len__()` → always `True`
-- `@dataclass(frozen=True)` → auto `__eq__` + `__hash__`, immutable
+- Generator expression `(...)` → **O(1) memory, single-use**
+- Generators are **permanently dead** after exhaustion
 
-### Error Handling
-- Catch `Exception`, **never bare `except:`** (catches `KeyboardInterrupt` → unkillable)
-- `try / except / else / finally` — `else` = no exception, `finally` = always
-- `raise X from Y` → exception chaining, preserves cause
-- `__exit__` returning `True` suppresses exception — dangerous
-- `@contextmanager` → generator-based context manager
+### 🖼️ Decorator Mental Model
 
-### Comprehensions & Functional Tools
-- Four types: `[list]` `{dict}` `{set}` `(generator)`
-- `lru_cache` → args must be **hashable**. `list` arg → `TypeError`.
-- `groupby` → input must be **pre-sorted**
-- `itertools`: `chain`, `islice`, `groupby`, `product`, `combinations`
+```mermaid
+flowchart LR
+    ORIG["original func"] -->|"C wraps"| C["C(func)"]
+    C -->|"B wraps"| B["B(C(func))"]
+    B -->|"A wraps"| A["A(B(C(func)))"]
+
+    CALL["call()"] --> A -->|"A's logic"| B -->|"B's logic"| C -->|"C's logic"| ORIG
+
+    style ORIG fill:#2d6a4f,color:#fff
+    style A fill:#d00000,color:#fff
+    style B fill:#e76f51,color:#fff
+    style C fill:#f4a261,color:#000
+```
+
+`@A @B @C def f` → `A(B(C(f)))`. **Always `@functools.wraps(func)`.**
+
+### 🖼️ MRO — Diamond Inheritance
+
+```mermaid
+flowchart TD
+    D["D"] --> B["B"] --> A["A"] --> OBJ["object"]
+    D --> C["C"] --> A
+    MRO["MRO: D → B → C → A → object\nsuper() in B calls C, NOT A!"]
+
+    style D fill:#d00000,color:#fff
+    style MRO fill:#2d6a4f,color:#fff
+```
+
+### 🖼️ `__eq__` / `__hash__` Contract
+
+```mermaid
+flowchart TD
+    EQ{"a == b?"} -->|"True"| HASH{"hash(a) == hash(b)?"}
+    HASH -->|"MUST be True"| OK["✅ Contract holds"]
+    HASH -->|"False"| CORRUPT["💀 Silent corruption\nGhost entries in dict/set"]
+
+    EQ -->|"False"| ANY["hash can be anything\n(collisions are OK)"]
+
+    style OK fill:#2d6a4f,color:#fff
+    style CORRUPT fill:#d00000,color:#fff
+```
+
+- Return `NotImplemented`, not `False`, for unknown types
+- **Truthiness:** `__bool__()` → `__len__()` → `True`
+- `@dataclass(frozen=True)` → auto correct `__eq__` + `__hash__`
+
+### 🖼️ Exception Hierarchy
+
+```mermaid
+flowchart TD
+    BE["BaseException ☠️"] --> SE["SystemExit"]
+    BE --> KI["KeyboardInterrupt"]
+    BE --> GE["GeneratorExit"]
+    BE --> EX["Exception ✅ CATCH THIS"]
+    EX --> VE["ValueError"]
+    EX --> TE["TypeError"]
+    EX --> KE["KeyError"]
+    EX --> RE["RuntimeError"]
+    EX --> OE["OSError"]
+
+    style BE fill:#800f19,color:#fff
+    style EX fill:#2d6a4f,color:#fff
+```
+
+**Never bare `except:`** — catches `KeyboardInterrupt` → unkillable process.
 
 ---
 
 ## Phase 3 — CPython Internals (M11–M13)
 
-### Compilation & Bytecode
-- Source → Tokens → AST → **Bytecode (.pyc)** → PVM execution
-- Python is **compiled to bytecode**, not purely interpreted
-- `.pyc` in `__pycache__/`, version-specific, invalidated on source change
-- Constant folding: `24*60*60` → `86400` at compile time
-- `dis.dis(func)` to inspect bytecode
+### 🖼️ Compilation Pipeline
 
-### Memory Management
-- **Reference counting** (primary, deterministic) + **generational GC** (cycles)
-- pymalloc: objects ≤512 bytes. OS malloc: larger objects.
-- **3 generations:** Gen 0 (threshold 700) → Gen 1 (every 10) → Gen 2 (every 10)
-- `gc.disable()` disables cyclic GC only — refcounting still works
-- `__del__` timing is unpredictable → use context managers for cleanup
-- `weakref.ref()` → references that don't prevent GC
+```mermaid
+flowchart LR
+    SRC["Source (.py)"] --> TOK["Tokenizer"] --> AST["AST"] --> COMP["Compiler"] --> BC["Bytecode (.pyc)"] --> PVM["PVM Execution"]
 
-### The GIL
-- **Mutex:** only one thread executes Python bytecode at a time
-- Exists because refcounting is not thread-safe
-- **Switches every 5ms** (`sys.getswitchinterval()`)
-- GIL protects **CPython internals**, NOT your data structures
-- **`counter += 1` is NOT thread-safe** — 3 bytecode ops, needs `Lock`
-- **Released during I/O** → threading works for I/O-bound tasks
-- CPU-bound → `multiprocessing` (separate GIL per process)
+    style SRC fill:#6a0572,color:#fff
+    style BC fill:#2a9d8f,color:#fff
+    style PVM fill:#d00000,color:#fff
+```
+
+### 🖼️ Memory Management — Two Mechanisms
+
+```mermaid
+flowchart TD
+    subgraph PRIMARY["Reference Counting (Primary)"]
+        RC["Every object has ob_refcnt\nrefcount 0 → IMMEDIATE free\n(deterministic)"]
+    end
+    subgraph SECONDARY["Generational GC (Cycles)"]
+        G0["Gen 0\nNew objects\nThreshold: 700"] --> G1["Gen 1\nEvery 10 gen-0"]
+        G1 --> G2["Gen 2\nEvery 10 gen-1"]
+    end
+
+    PRIMARY -->|"Can't handle cycles"| SECONDARY
+
+    style PRIMARY fill:#2d6a4f,color:#fff
+    style SECONDARY fill:#264653,color:#fff
+    style G0 fill:#d00000,color:#fff
+    style G1 fill:#e76f51,color:#fff
+    style G2 fill:#264653,color:#fff
+```
+
+### 🖼️ GIL — One Microphone Room
+
+```mermaid
+gantt
+    title GIL Thread Switching (5ms intervals)
+    dateFormat X
+    axisFormat %s
+
+    section Thread 1
+    Execute    :a1, 0, 5
+    Wait       :a2, 5, 10
+    Execute    :a3, 10, 15
+
+    section Thread 2
+    Wait       :b1, 0, 5
+    Execute    :b2, 5, 10
+    Wait       :b3, 10, 15
+```
+
+- GIL protects **CPython internals**, NOT your data
+- **`counter += 1` = 3 bytecode ops** → needs `Lock`
+- **Released during I/O** → threading works for I/O-bound
 
 ---
 
 ## Phase 4 — Concurrency (M14–M16)
 
-### Decision Framework
+### 🖼️ Concurrency Decision Framework
 
+```mermaid
+flowchart TD
+    Q{"Bottleneck?"} -->|"I/O-bound\n< 100 tasks"| THREADS["🟢 ThreadPoolExecutor\n~8 MB/thread"]
+    Q -->|"I/O-bound\n100–10,000+"| ASYNC["🟣 asyncio\n~1 KB/coroutine"]
+    Q -->|"CPU-bound"| MP["🔴 ProcessPoolExecutor\n~30 MB/process"]
+    Q -->|"Both"| HY["🟠 asyncio +\nrun_in_executor"]
+
+    style THREADS fill:#2a9d8f,color:#fff
+    style ASYNC fill:#6a0572,color:#fff
+    style MP fill:#d00000,color:#fff
+    style HY fill:#e76f51,color:#fff
 ```
-I/O-bound, < 100 tasks    → ThreadPoolExecutor
-I/O-bound, 100–10,000+    → asyncio
-CPU-bound                  → ProcessPoolExecutor
-Mixed                      → asyncio + run_in_executor
-```
 
-### Threading
-- Works for **I/O-bound** (GIL released during I/O)
-- `Lock` for mutual exclusion, `Semaphore(n)` for rate limiting
-- Thread stack ~8 MB. 1000 threads = 8 GB.
-- Daemon threads killed on main exit — no cleanup
+### 🖼️ Comparison
 
-### Multiprocessing
-- **True CPU parallelism** — each process has own GIL
-- `fork` vs `spawn`: fork is fast but unsafe with threads. Spawn is safe.
-- **`if __name__ == '__main__'` guard is mandatory** (Windows/macOS)
-- Everything must be **picklable** — no lambdas, no local functions
-- Process overhead ~30 MB each
+| | Threading | Multiprocessing | Asyncio |
+|---|-----------|-----------------|---------|
+| **Type** | Preemptive | True parallel | Cooperative |
+| **GIL** | Blocked (CPU) | Own GIL ✅ | N/A (1 thread) |
+| **Memory** | ~8 MB | ~30 MB | **~1 KB** |
+| **Best for** | I/O, <100 | CPU-bound | I/O, 100–10K+ |
+| **Switch** | OS | OS | `await` (you) |
+| **Shared state** | Yes (need Lock) | No (need IPC) | Yes (no locks*) |
 
-### Asyncio
-- **Cooperative concurrency** on single thread via event loop
-- Coroutine overhead ~**1 KB** vs ~8 MB per thread
-- `await` = suspension point, yields control to event loop
-- **Blocking calls freeze entire event loop** — use `asyncio.to_thread()`
-- `asyncio.gather()` preserves input order, not completion order
+*single-threaded asyncio = no preemption between `await` points
 
 ---
 
 ## Phase 5 — Production (M17–M20)
 
-### Imports
-- `import` checks `sys.modules` cache → finders → loaders → cache
-- Module code runs **top-to-bottom on first import** — side effects are real
-- Circular import fix: function-level import, `TYPE_CHECKING` guard, restructure
-- `__all__` controls `from module import *`
+### 🖼️ Import System
 
-### Type Hints
-- **ZERO runtime effect** — only `mypy` and IDEs use them
-- `Optional[X]` = `X | None` (not "argument is optional")
-- `Protocol` = structural typing (duck typing with type safety)
-- `TYPE_CHECKING` guard breaks circular imports
+```mermaid
+flowchart LR
+    IMP["import foo"] --> CACHE{"sys.modules?"}
+    CACHE -->|"Hit"| RET["Return cached"]
+    CACHE -->|"Miss"| FIND["Search sys.path"]
+    FIND --> LOAD["Execute module"]
+    LOAD --> STORE["Cache in sys.modules"]
+    STORE --> RET
 
-### Testing
-- **Arrange-Act-Assert** pattern
-- **Mock where it's imported, not where it's defined**
+    style CACHE fill:#ff9f1c,color:#000
+    style RET fill:#2d6a4f,color:#fff
+```
+
+### 🖼️ Test Pyramid
+
+```mermaid
+flowchart TD
+    E2E["🔺 E2E Tests\nFew, slow, expensive"]
+    INT["🔶 Integration Tests\nSome, moderate"]
+    UNIT["🟩 Unit Tests\nMany, fast, cheap"]
+
+    E2E --- INT --- UNIT
+
+    style E2E fill:#d00000,color:#fff
+    style INT fill:#e76f51,color:#fff
+    style UNIT fill:#2d6a4f,color:#fff
+```
+
+- **Mock where imported, not defined**
 - Fixture scopes: `function → class → module → session`
-- `conftest.py` shares fixtures — auto-discovered, no import needed
-- `@pytest.mark.parametrize` for data-driven tests
 
-### Performance
-- **Measure first, optimize second** — `cProfile` → `line_profiler` → `tracemalloc`
-- `str += str` loop → O(n²). `"".join()` → O(n).
-- `if x in list` → O(n). `if x in set` → O(1).
-- Local variable lookup ~20% faster than global in hot loops
-- `__slots__` for memory optimization of millions of instances
+### 🖼️ Optimization Hierarchy
+
+```mermaid
+flowchart LR
+    A1["Algorithm\nO(n²)→O(n)"] --> A2["Data Structure\nlist→set"] --> A3["Python-level\njoin, slots"] --> A4["C Extension\nnumpy, Cython"]
+
+    style A1 fill:#d00000,color:#fff
+    style A2 fill:#e76f51,color:#fff
+    style A3 fill:#2a9d8f,color:#fff
+    style A4 fill:#264653,color:#fff
+```
 
 ---
 
 ## Phase 6 — Design & Architecture (M21–M22)
 
-### Design Patterns (Pythonic)
-- **Strategy** → just pass a function (no interface class needed)
-- **Singleton** → module-level instance (modules ARE singletons)
-- **Iterator** → generator function
-- **Registry** → `__init_subclass__` auto-registration
-- **Resource mgmt** → context manager (`with`)
-- `@dataclass` replaces Builder/DTO patterns
+### 🖼️ Java Pattern → Python Way
 
-### System Design
-- **WSGI** (sync: Django/Flask + Gunicorn) vs **ASGI** (async: FastAPI + Uvicorn)
-- Gunicorn workers = **processes** (own GIL). Formula: `(2 × CPU) + 1`
-- **Celery** for background tasks — tasks must be **idempotent** + JSON-serializable
-- Connection pooling is mandatory (SQLAlchemy `pool_size`)
-- Python strength = ecosystem + dev speed. Weakness = raw perf + GIL.
+```mermaid
+flowchart LR
+    S1["Strategy Pattern\n(interface + classes)"] -->|"Python"| S2["Pass a function"]
+    S3["Singleton\n(private constructor)"] -->|"Python"| S4["Module-level instance"]
+    S5["Iterator\n(Iterator class)"] -->|"Python"| S6["Generator function"]
+    S7["Observer\n(interface + register)"] -->|"Python"| S8["Callbacks / signals"]
+
+    style S1 fill:#800f19,color:#fff
+    style S2 fill:#2d6a4f,color:#fff
+    style S3 fill:#800f19,color:#fff
+    style S4 fill:#2d6a4f,color:#fff
+    style S5 fill:#800f19,color:#fff
+    style S6 fill:#2d6a4f,color:#fff
+    style S7 fill:#800f19,color:#fff
+    style S8 fill:#2d6a4f,color:#fff
+```
+
+### 🖼️ Python Web Stack
+
+```mermaid
+flowchart LR
+    CLIENT["Client"] --> LB["Nginx / ALB"]
+    LB --> APP["Gunicorn / Uvicorn\n(2×CPU+1 workers)"]
+    APP --> CODE["Django / FastAPI"]
+    CODE --> CACHE["Redis"]
+    CODE --> DB["PostgreSQL"]
+    CODE --> QUEUE["Celery Workers"]
+
+    style LB fill:#264653,color:#fff
+    style APP fill:#2a9d8f,color:#fff
+    style CODE fill:#e76f51,color:#fff
+    style QUEUE fill:#6a0572,color:#fff
+```
+
+- WSGI (sync) vs ASGI (async) — Gunicorn workers = **processes** (own GIL)
+- Celery tasks: **idempotent** + JSON-serializable
 
 ---
 
