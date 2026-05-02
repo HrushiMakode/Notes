@@ -76,12 +76,10 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    subgraph AUTH_METHODS["Authentication Methods"]
-        IAM["IAM (SigV4)\nService-to-service"]
-        COG["Cognito\nEnd users + Cognito"]
-        LA["Lambda Authorizer\nAny IdP (Auth0/Okta/Firebase)"]
-        RP["Resource Policy\nIP/VPC/Account filtering"]
-    end
+    WHO{"Who is calling?"} --> IAM["IAM SigV4\nService-to-service"]
+    WHO --> COG["Cognito\nEnd users + Cognito"]
+    WHO --> LA["Lambda Authorizer\nAny IdP - Auth0/Okta/Firebase"]
+    WHO --> RP["Resource Policy\nIP/VPC/Account filtering"]
 
     style IAM fill:#264653,color:#fff
     style COG fill:#2a9d8f,color:#fff
